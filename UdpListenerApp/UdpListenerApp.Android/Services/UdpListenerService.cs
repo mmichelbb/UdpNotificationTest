@@ -14,16 +14,20 @@ using Java.Net;
 
 namespace UdpListenerApp.Droid.Services
 {
+	[Service]
 	public class UdpListenerService : Service
 	{
+		public event EventHandler<string[]> OnMessageReceived = delegate { };
 		DatagramSocket socket;
+		UdpListenerServiceBinder binder;
 
 		static string UDP_BROADCAST = "UDPBroadcast";
 		static int UDP_LISTEN_PORT = 6666;
 
 		public override IBinder OnBind(Intent intent)
 		{
-			return null;
+			binder = new UdpListenerServiceBinder(this);
+			return binder;
 		}
 
 		public override void OnDestroy()
@@ -41,7 +45,7 @@ namespace UdpListenerApp.Droid.Services
 
 		Java.Lang.Thread UDPBroadcastThread;
 
-		public void StartListenForUDPBroadcast()
+		public void StartListenForUDP()
 		{
 			UDPBroadcastThread = new Java.Lang.Thread(new Runnable(Run));
 
@@ -80,14 +84,7 @@ namespace UdpListenerApp.Droid.Services
 			string message = Encoding.UTF8.GetString(packet.GetData());
 			string[] msg = message.Split(new string[] { "::" }, StringSplitOptions.RemoveEmptyEntries);
 
-			if ((Xamarin.Forms.Application.Current as App).IsBackgrounded)
-			{
-				LocalNotificationService.ShowNotification(msg[0], "From " + senderIP + ": " + msg[1]);
-			}
-			else
-			{
-				MainActivity.Instance.ShowToast(msg[0], "From " + senderIP + ": " + msg[1]);
-			}
+			this.OnMessageReceived(this, msg);
 			socket.Close();
 		}
 	}
